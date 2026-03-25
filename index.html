@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Count Marbles</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Count Marbles in Image</h1>
+      <p>Upload a solid-background image containing same-size solid-color marbles.</p>
+    </header>
+
+    <section class="controls">
+      <label for="imageInput">Select image file:</label>
+      <input id="imageInput" type="file" accept="image/*" />
+
+      <label for="scaleInput">Max processing size (px): <span id="scaleValue">1024</span></label>
+      <input id="scaleInput" type="range" min="200" max="2048" step="100" value="1024" />
+
+      <label for="toleranceInput">Background tolerance (RGB): <span id="toleranceValue">20</span></label>
+      <input id="toleranceInput" type="range" min="1" max="80" step="1" value="20" />
+
+      <label for="minBlobInput">Min marble pixel area: <span id="minBlobValue">30</span></label>
+      <input id="minBlobInput" type="range" min="5" max="300" step="5" value="30" />
+
+      <label for="bboxToggle"><input id="bboxToggle" type="checkbox" checked /> Show bounding boxes</label>
+
+      <button id="bgPickButton" disabled>Pick background from image</button>
+      <span id="bgHint" class="hint">Click the button then click the image to choose background color.</span>
+
+      <button id="marblePickButton" disabled>Pick marble color</button>
+      <span id="marbleHint" class="hint">Click the button then click marble pixels on the image; repeat to add colors.</span>
+      <div id="pickedMarbles" class="picked-palettes"></div>
+      <label><input id="usePickedMarbles" type="checkbox" /> Use picked marble color set</label>
+
+      <button id="countButton" disabled>Count Marbles</button>
+      <button id="resetButton" disabled>Reset</button>
+
+      <label for="bgColorInput">Manual background RGB:</label>
+      <input id="bgColorInput" type="color" value="#ffffff" />
+      <input id="useManualBg" type="checkbox" /> Use manual background color
+    </section>
+
+    <section class="preview">
+      <div class="canvas-wrap">
+        <canvas id="displayCanvas"></canvas>
+        <canvas id="workCanvas" style="display:none"></canvas>
+      </div>
+      <div id="readout" class="readout"></div>
+    </section>
+
+    <section class="output">
+      <h2>Results</h2>
+      <div id="legend" class="legend"></div>
+      <div id="pickedColorsSummary" class="picked-colors-summary"></div>
+      <div id="stats" class="stats"></div>
+      <div class="export-controls">
+        <button id="exportCsv" disabled>Export CSV</button>
+        <button id="exportJson" disabled>Export JSON</button>
+      </div>
+      <div id="confidence" class="confidence"></div>
+    </section>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
