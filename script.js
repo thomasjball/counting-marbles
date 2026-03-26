@@ -14,6 +14,7 @@ const toleranceValue = document.getElementById('toleranceValue');
 const minBlobInput = document.getElementById('minBlobInput');
 const minBlobValue = document.getElementById('minBlobValue');
 const bboxToggle = document.getElementById('bboxToggle');
+const edgeToggle = document.getElementById('edgeToggle');
 const bgPickButton = document.getElementById('bgPickButton');
 const bgHint = document.getElementById('bgHint');
 const marblePickButton = document.getElementById('marblePickButton');
@@ -309,7 +310,7 @@ function runCounting(imageData, tolerance, minBlobArea) {
     entry.blobs.push(blob);
   }
 
-  displayResults(colorKeyed, blobs.length, width, height, bgRGB);
+  displayResults(colorKeyed, blobs.length, width, height, bgRGB, imageData, mask);
 }
 
 function findMostFrequentColor(colorCount) {
@@ -407,7 +408,7 @@ function connectedComponents(mask, width, height) {
   return components;
 }
 
-function displayResults(colorKeyed, totalMarbles, width, height, bgRGB) {
+function displayResults(colorKeyed, totalMarbles, width, height, bgRGB, imageData, mask) {
   legend.innerHTML = '';
   const pickedColorsSummary = document.getElementById('pickedColorsSummary');
   pickedColorsSummary.innerHTML = '';
@@ -464,6 +465,22 @@ function displayResults(colorKeyed, totalMarbles, width, height, bgRGB) {
     }
   }
 
+  if (edgeToggle.checked && imageData && mask) {
+    const edges = sobelEdges(imageData, mask, width, height, 20);
+    const canvasPixels = ctx.getImageData(0, 0, width, height);
+    const cd = canvasPixels.data;
+    for (let i = 0; i < edges.length; i++) {
+      if (edges[i]) {
+        const pi = i * 4;
+        cd[pi]     = 255;
+        cd[pi + 1] = 255;
+        cd[pi + 2] = 255;
+        cd[pi + 3] = 255;
+      }
+    }
+    ctx.putImageData(canvasPixels, 0, 0);
+  }
+
   readout.textContent = 'Complete.';
 
   lastResults = {
@@ -485,4 +502,53 @@ function displayResults(colorKeyed, totalMarbles, width, height, bgRGB) {
   } else {
     confidence.textContent = '';
   }
+}
+
+// Sobel edge detection restricted to the foreground mask (expanded by 1px to capture
+// the marble-background boundary). Returns a binary Uint8Array of the same size.
+function sobelEdges(imageData, mask, width, height, threshold) {
+  const { data } = imageData;
+
+  // Convert to grayscale luminance
+  const gray = new Float32Array(width * height);
+  for (let i = 0; i < width * height; i++) {
+    const pi = i * 4;
+    gray[i] = 0.299 * data[pi] + 0.587 * data[pi + 1] + 0.114 * data[pi + 2];
+  }
+
+  // Expand mask by 1 pixel so the outer boundary edge (which sits in the background)
+  // is included in the Sobel computation.
+  const expanded = new Uint8Array(width * height);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (!mask[y * width + x]) continue;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const ny = y + dy, nx = x + dx;
+          if (ny >= 0 && ny < height && nx >= 0 && nx < width) {
+            expanded[ny * width + nx] = 1;
+          }
+        }
+      }
+    }
+  }
+
+  // Sobel 3x3 kernel within the expanded mask
+  const edges = new Uint8Array(width * height);
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      const i = y * width + x;
+      if (!expanded[i]) continue;
+      const gx =
+        -gray[(y - 1) * width + (x - 1)] + gray[(y - 1) * width + (x + 1)]
+        - 2 * gray[y * width + (x - 1)]  + 2 * gray[y * width + (x + 1)]
+        - gray[(y + 1) * width + (x - 1)] + gray[(y + 1) * width + (x + 1)];
+      const gy =
+        gray[(y + 1) * width + (x - 1)] + 2 * gray[(y + 1) * width + x] + gray[(y + 1) * width + (x + 1)]
+        - gray[(y - 1) * width + (x - 1)] - 2 * gray[(y - 1) * width + x] - gray[(y - 1) * width + (x + 1)];
+      if (Math.sqrt(gx * gx + gy * gy) > threshold) edges[i] = 1;
+    }
+  }
+
+  return edges;
 }
